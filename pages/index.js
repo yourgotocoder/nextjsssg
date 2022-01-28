@@ -1,24 +1,40 @@
+import Head from "next/head";
 import MeetupList from "../components/meetups/MeetupList";
-import Layout from "../components/layout/Layout";
-
-const DUMMY_MEETUPS = [
-    {
-        id: "m1",
-        title: "A first meetup",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Church_of_Saint_Simeon_Stylites_01.jpg/220px-Church_of_Saint_Simeon_Stylites_01.jpg",
-        address: "Some address",
-        description: "This is a first meetup",
-    },
-];
+import { MongoClient } from "mongodb";
 
 function HomePage(props) {
-    return <MeetupList meetups={props.meetups} />;
+    return (
+        <>
+            <Head>
+                <title>React Meetups</title>
+                <meta name="description" content="Browse meetups" />
+            </Head>
+            <MeetupList meetups={props.meetups} />
+        </>
+    );
 }
 
 export async function getStaticProps() {
+    console.log(process.env.DB_URL);
+    const client = await MongoClient.connect(process.env.DB_URL);
+    const db = client.db();
+
+    const meetupsCollection = db.collection("meetups");
+
+    const meetups = await meetupsCollection.find().toArray();
+
+    client.close();
+
     return {
         props: {
-            meetups: DUMMY_MEETUPS,
+            meetups: meetups.map((meetup) => {
+                return {
+                    title: meetup.title,
+                    address: meetup.address,
+                    image: meetup.image,
+                    id: meetup._id.toString(),
+                };
+            }),
         },
         revalidate: 10,
     };
